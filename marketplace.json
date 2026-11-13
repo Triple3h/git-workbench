@@ -1,0 +1,30 @@
+{
+  "name": "git-workbench",
+  "description": "Read-only Git workbench for ZCode: changes, diffs and a branch/commit lane graph in a side panel.",
+  "description_i18n": {
+    "en": "Read-only Git workbench for ZCode: working tree changes, file diffs and a branch/commit lane graph in a side panel.",
+    "zh-CN": "ZCode 只读 Git 工作台：在侧栏查看工作区变更、文件 diff、分支提交泳道图与提交详情。"
+  },
+  "owner": {
+    "name": "Triple3h",
+    "url": "https://github.com/Triple3h"
+  },
+  "plugins": [
+    {
+      "name": "git-workbench",
+      "source": "./",
+      "version": "0.2.1",
+      "description": "Read-only Git workbench for ZCode: working tree changes, file diffs, commit graph and commit details in a side panel.",
+      "description_i18n": {
+        "en": "Read-only Git workbench: working tree changes, file diffs, a branch/commit lane graph and commit details in a side panel.",
+        "zh-CN": "只读 Git 工作台：在侧栏查看工作区变更、文件 diff、分支提交泳道图与提交详情。"
+      },
+      "displayName": "Git Workbench",
+      "displayName_i18n": {
+        "en": "Git Workbench",
+        "zh-CN": "Git 工作台"
+      },
+      "category": "developer-tools"
+    }
+  ]
+}

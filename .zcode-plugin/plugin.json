@@ -1,0 +1,43 @@
+{
+  "name": "git-workbench",
+  "version": "0.2.1",
+  "description": "Read-only Git workbench for ZCode: working tree changes, file diffs, commit graph and commit details in a side panel.",
+  "description_i18n": {
+    "en": "Read-only Git workbench: working tree changes, file diffs, a branch/commit lane graph and commit details in a side panel.",
+    "zh-CN": "只读 Git 工作台：在侧栏查看工作区变更、文件 diff、分支提交泳道图与提交详情。"
+  },
+  "author": {
+    "name": "Triple3h",
+    "url": "https://github.com/Triple3h"
+  },
+  "license": "MIT",
+  "mcpServers": {
+    "git": {
+      "type": "stdio",
+      "command": "/bin/sh",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/bin/launch.sh",
+        "${CLAUDE_PLUGIN_ROOT}/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "git",
+        "title": {
+          "zh-CN": "Git 工作台",
+          "en-US": "Git Workbench"
+        },
+        "icon": "git-branch",
+        "server": "git",
+        "resourceUri": "ui://git-workbench/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

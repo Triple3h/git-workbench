@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Git Workbench · dev harness</title>
+    <link rel="stylesheet" href="../ui/panel.css" />
+    <style>
+      html,
+      body,
+      #root {
+        margin: 0;
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script>
+      /* ------------------------------------------------------------------ */
+      /* Mock host bridge                                                    */
+      /* ------------------------------------------------------------------ */
+
+      const params = new URLSearchParams(location.search);
+      const theme = params.get("theme") === "light" ? "light" : "dark";
+
+      window.zcode = {
+        ready: Promise.resolve(),
+        theme,
+        locale: "zh-CN",
+        hostContext: { theme, locale: "zh-CN", styles: { variables: {} } },
+        subscribe() {
+          return () => {};
+        },
+        async readResource(uri) {
+          throw new Error(`harness does not serve resources: ${uri}`);
+        },
+        async callTool(name, args) {
+          await new Promise((resolve) => setTimeout(resolve, 70));
+          return mockTool(name, args || {});
+        },
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* Fixtures                                                            */
+      /* ------------------------------------------------------------------ */
+
+      const NOW = Date.now();
+      const hours = (value) => new Date(NOW - value * 3600_000).toISOString();
+      const days = (value) => new Date(NOW - value * 86400_000).toISOString();
+
+      const people = [
+        ["林墨", "lin.mo@example.com"],
+        ["陈屿", "chen.yu@example.com"],
+        ["周野", "zhou.ye@example.com"],
+        ["TripleH", "triple3h@example.com"],
+      ];
+
+      const commits = [
+        {
+          hash: "7f3a1b2",
+          parents: ["9d2c4e8", "3b8f5a1"],
+          subject: "merge: 合并 feature/git-panel 到 develop",
+          refs: [
+            { name: "develop", type: "head" },
+            { name: "origin/develop", type: "remote" },
+          ],
+          date: hours(1),
+        },
+        {
+          hash: "3b8f5a1",
+          parents: ["e4a7b3c"],
+          subject: "feat(git): 泳道图支持合并提交与多分支",
+          refs: [{ name: "feature/git-panel", type: "branch" }],
+          date: hours(6),
+        },
+        {
+          hash: "5c1d9e7",
+          parents: ["e9c3b6f"],
+          subject: "experiment: 尝试用 canvas 绘制泳道",
+          refs: [{ name: "experiment/paint", type: "branch" }],
+          date: hours(9),
+        },
+        {
+          hash: "6e2b8d1",
+          parents: ["8e1b3a7"],
+          subject: "wip: 虚拟滚动草稿",
+          refs: [{ name: "origin/wip", type: "remote" }],
+          date: hours(11),
+        },
+        {
+          hash: "9d2c4e8",
+          parents: ["8a2e6c1"],
+          subject: "feat: 提交面板展示未跟踪文件",
+          refs: [],
+          date: hours(13),
+        },
+        {
+          hash: "e4a7b3c",
+          parents: ["1f9d2b4"],
+          subject: "feat(git): 新增提交详情面板",
+          refs: [],
+          date: hours(20),
+        },
+        {
+          hash: "1f9d2b4",
+          parents: ["2e5c8a3"],
+          subject: "feat(git): 变更列表按状态分组",
+          refs: [],
+          date: hours(26),
+        },
+        {
+          hash: "8a2e6c1",
+          parents: ["4d7b1f9"],
+          subject: "fix: 修正重命名文件的状态标记",
+          refs: [],
+          date: hours(29),
+        },
+        {
+          hash: "4d7b1f9",
+          parents: ["2e5c8a3"],
+          subject: "chore: 调整面板间距与滚动条",
+          refs: [],
+          date: hours(33),
+        },
+        {
+          hash: "2e5c8a3",
+          parents: ["6b1f4d7"],
+          subject: "refactor: 拆分 git 命令层与解析层",
+          refs: [],
+          date: hours(38),
+        },
+        {
+          hash: "6b1f4d7",
+          parents: ["0c4b7e1", "a3d8e2f"],
+          subject: "merge: 合并 hotfix/rename",
+          refs: [],
+          date: hours(44),
+        },
+        {
+          hash: "a3d8e2f",
+          parents: ["8e1b3a7"],
+          subject: "fix: 单路径 diff 时重命名检测失效",
+          refs: [{ name: "hotfix/rename", type: "branch" }],
+          date: hours(47),
+        },
+        {
+          hash: "0c4b7e1",
+          parents: ["f6a2c5d"],
+          subject: "docs: 补充只读模式说明",
+          refs: [],
+          date: hours(52),
+        },
+        {
+          hash: "f6a2c5d",
+          parents: ["8e1b3a7"],
+          subject: "test: 补充 diff 分页用例",
+          refs: [{ name: "origin/release", type: "remote" }],
+          date: hours(58),
+        },
+        {
+          hash: "8e1b3a7",
+          parents: ["2a7f9c4"],
+          subject: "feat: 提交记录支持分支筛选",
+          refs: [],
+          date: hours(64),
+        },
+        {
+          hash: "2a7f9c4",
+          parents: ["b5d1e8a"],
+          subject: "feat: 新增左侧分支树",
+          refs: [],
+          date: hours(70),
+        },
+        {
+          hash: "b5d1e8a",
+          parents: ["e9c3b6f"],
+          subject: "chore: 初始化 Git 工作台插件",
+          refs: [],
+          date: hours(76),
+        },
+        {
+          hash: "e9c3b6f",
+          parents: ["1b8e4d2"],
+          subject: "docs: 写下第一版 README",
+          refs: [],
+          date: days(3.4),
+        },
+        {
+          hash: "1b8e4d2",
+          parents: ["c4f7a1e"],
+          subject: "feat: 侧栏基础布局",
+          refs: [],
+          date: days(4.1),
+        },
+        {
+          hash: "c4f7a1e",
+          parents: [],
+          subject: "init: 初始提交",
+          refs: [{ name: "v0.1.0", type: "tag" }],
+          date: days(5),
+        },
+      ].map((commit, index) => {
+        const person = people[index % people.length];
+        return {
+          ...commit,
+          short: commit.hash.slice(0, 7),
+          author: person[0],
+          email: person[1],
+        };
+      });
+
+      const commitByHash = new Map(commits.map((commit) => [commit.hash, commit]));
+
+      const branchTips = {
+        develop: "7f3a1b2",
+        HEAD: "7f3a1b2",
+        "feature/git-panel": "3b8f5a1",
+        "hotfix/rename": "a3d8e2f",
+        "experiment/paint": "5c1d9e7",
+        "origin/develop": "7f3a1b2",
+        "origin/release": "f6a2c5d",
+        "origin/wip": "6e2b8d1",
+        "origin/main": "7f3a1b2",
+        "v0.1.0": "c4f7a1e",
+      };
+
+      function ancestorsOf(hash) {
+        const seen = new Set();
+        const stack = [hash];
+        while (stack.length) {
+          const current = stack.pop();
+          if (!current || seen.has(current)) continue;
+          seen.add(current);
+          const commit = commitByHash.get(current);
+          if (commit) stack.push(...commit.parents);
+        }
+        return seen;
+      }
+
+      const branches = {
+        current: "develop",
+        detached: false,
+        unborn: false,
+        head: {
+          hash: "7f3a1b2",
+          author: "林墨",
+          date: hours(1),
+          subject: "merge: 合并 feature/git-panel 到 develop",
+        },
+        local: [
+          { name: "develop", hash: "7f3a1b2", current: true, upstream: "origin/develop", ahead: 2, behind: 0, date: hours(1) },
+          { name: "feature/git-panel", hash: "3b8f5a1", current: false, upstream: null, ahead: 3, behind: 0, date: hours(6) },
+          { name: "hotfix/rename", hash: "a3d8e2f", current: false, upstream: null, ahead: 0, behind: 1, date: hours(47) },
+          { name: "experiment/paint", hash: "5c1d9e7", current: false, upstream: null, ahead: 4, behind: 2, date: hours(9) },
+        ],
+        remote: [
+          { name: "origin/develop", hash: "7f3a1b2", date: hours(1) },
+          { name: "origin/release", hash: "f6a2c5d", date: hours(58) },
+          { name: "origin/wip", hash: "6e2b8d1", date: hours(11) },
+          { name: "origin/main", hash: "7f3a1b2", date: hours(1) },
+        ],
+        tags: [
+          { name: "v0.1.0", hash: "c4f7a1e", date: days(5) },
+          { name: "v0.0.9", hash: "1b8e4d2", date: days(4.1) },
+        ],
+        truncated: false,
+      };
+
+      const status = {
+        isRepo: true,
+        root: "/Users/triple3h/work/bailing-ops-statistics",
+        workspace: "/Users/triple3h/work/bailing-ops-statistics",
+        branch: "develop",
+        detached: false,
+        unborn: false,
+        head: {
+          hash: "7f3a1b2c4d5e6f708192a3b4c5d6e7f8091a2b3c",
+          author: "林墨",
+          date: hours(1),
+          subject: "merge: 合并 feature/git-panel 到 develop",
+        },
+        upstream: "origin/develop",
+        ahead: 2,
+        behind: 0,
+        counts: { staged: 3, unstaged: 3, untracked: 3, conflicted: 0 },
+        groups: {
+          staged: [
+            { path: "src/git/panel.ts", status: "M" },
+            { path: "docs/screenshots/commit-view.png", status: "A" },
+            { path: "src/git/legacy-name.ts", status: "R", origPath: "src/git/old-name.ts" },
+          ],
+          unstaged: [
+            { path: "src/git/log-view.ts", status: "M" },
+            { path: "README.md", status: "M" },
+            { path: "src/git/branches.ts", status: "D" },
+          ],
+          untracked: [
+            { path: "src/git/graph.ts", status: "?" },
+            { path: "notes/需求.md", status: "?" },
+            { path: "dev/harness.html", status: "?" },
+          ],
+          conflicted: [],
+        },
+        truncated: false,
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* Mock data builders                                                  */
+      /* ------------------------------------------------------------------ */
+
+      function fileStats(index, path) {
+        const statuses = ["M", "M", "A", "D", "R"];
+        const status = statuses[index % statuses.length];
+        return {
+          path,
+          status,
+          additions: 12 + index * 7,
+          deletions: index % 2 === 0 ? 3 + index : 0,
+          binary: false,
+          ...(status === "R" ? { origPath: path.replace("panel", "panel-old") } : {}),
+        };
+      }
+
+      function detailFor(hash) {
+        const commit =
+          commitByHash.get(hash) ||
+          commits.find((item) => item.hash.startsWith(hash)) ||
+          commits[0];
+        const files = [
+          fileStats(0, "src/git/panel.ts"),
+          fileStats(1, "src/git/log-view.ts"),
+          fileStats(2, "src/git/graph.ts"),
+          fileStats(3, "src/git/branches.ts"),
+          fileStats(4, "src/git/old-name.ts"),
+        ];
+        return {
+          hash: commit.hash,
+          short: commit.hash.slice(0, 7),
+          parents: commit.parents,
+          author: commit.author,
+          email: commit.email,
+          authoredAt: commit.date,
+          committer: commit.author,
+          committedAt: commit.date,
+          subject: commit.subject,
+          body: "合并 feature/git-panel 分支，补齐只读模式下的提交记录视图。\n\n- 泳道图支持合并与多分支\n- 详情面板展示文件列表\n- diff 抽屉支持分页加载",
+          merge: commit.parents.length > 1,
+          relativeTo: commit.parents.length > 0 ? "first-parent" : "root",
+          files,
+          truncated: false,
+          stats: {
+            files: files.length,
+            additions: files.reduce((sum, file) => sum + file.additions, 0),
+            deletions: files.reduce((sum, file) => sum + file.deletions, 0),
+          },
+        };
+      }
+
+      function makeDiff(path, options) {
+        const opts = options || {};
+        if (opts.binary) {
+          return `diff --git a/${path} b/${path}\nindex 1a2b3c4..5d6e7f8 100644\nBinary files a/${path} and b/${path} differ\n`;
+        }
+        const header = opts.rename
+          ? `diff --git a/${path} b/${opts.rename}\nsimilarity index 92%\nrename from ${path}\nrename to ${opts.rename}\n`
+          : opts.created
+            ? `diff --git a/${path} b/${path}\nnew file mode 100644\nindex 0000000..5d6e7f8\n--- /dev/null\n+++ b/${path}\n`
+            : opts.deleted
+              ? `diff --git a/${path} b/${path}\ndeleted file mode 100644\nindex 5d6e7f8..0000000\n--- a/${path}\n+++ /dev/null\n`
+              : `diff --git a/${path} b/${path}\nindex 1a2b3c4..5d6e7f8 100644\n--- a/${path}\n+++ b/${path}\n`;
+        return (
+          header +
+          "@@ -1,8 +1,11 @@\n" +
+          " import { el } from \"../ui/panel.js\";\n" +
+          " import { computeGraph } from \"./graph\";\n" +
+          "-const SCALE = 1;\n" +
+          "+const SCALE = 2;\n" +
+          "+\n" +
+          "+function laneColor(index) {\n" +
+          "+  return PALETTE[index % PALETTE.length];\n" +
+          "+}\n" +
+          " export function render(commits) {\n" +
+          "-  return commits.map((commit) => commit.subject);\n" +
+          "+  const rows = computeGraph(commits);\n" +
+          "+  return rows.map((row) => row.svg);\n" +
+          " }\n" +
+          "@@ -42,6 +45,9 @@ export function render(commits) {\n" +
+          "   const meta = { author: commit.author };\n" +
+          "   const time = formatRelative(commit.date);\n" +
+          "-  return { meta, time };\n" +
+          "+  return {\n" +
+          "+    meta,\n" +
+          "+    time,\n" +
+          "+    refs: commit.refs ?? [],\n" +
+          "+  };\n" +
+          " }\n" +
+          "\\ No newline at end of file\n" +
+          (opts.extra || "")
+        );
+      }
+
+      const diffOverrides = {
+        "staged:src/git/panel.ts": makeDiff("src/git/panel.ts"),
+        "worktree:src/git/log-view.ts": makeDiff("src/git/log-view.ts"),
+        "worktree:README.md": makeDiff("README.md"),
+        "staged:docs/screenshots/commit-view.png": makeDiff(
+          "docs/screenshots/commit-view.png",
+          { binary: true }
+        ),
+        "staged:src/git/legacy-name.ts": makeDiff("src/git/old-name.ts", {
+          rename: "src/git/legacy-name.ts",
+          extra:
+            "@@ -60,7 +60,7 @@ export function select(hash) {\n" +
+            "   if (!hash) return;\n" +
+            "-  this.selectedHash = hash.slice(0, 7);\n" +
+            "+  this.selectedHash = hash;\n" +
+            "   this.renderList();\n" +
+            " }\n",
+        }),
+        "worktree:src/git/branches.ts": makeDiff("src/git/branches.ts", { deleted: true }),
+        "untracked:src/git/graph.ts": makeDiff("src/git/graph.ts", { created: true }),
+        "untracked:notes/需求.md": makeDiff("notes/需求.md", { created: true }),
+        "untracked:dev/harness.html": makeDiff("dev/harness.html", { created: true }),
+      };
+
+      /* ------------------------------------------------------------------ */
+      /* Tool mock                                                           */
+      /* ------------------------------------------------------------------ */
+
+      function textResult(text, structured) {
+        return {
+          content: [{ type: "text", text: text || "" }],
+          structuredContent: structured,
+        };
+      }
+
+      function mockTool(name, args) {
+        if (name === "git_status") {
+          return textResult(
+            `分支 ${status.branch} · 3 个已暂存 · 3 个未暂存 · 3 个未跟踪`,
+            status
+          );
+        }
+
+        if (name === "git_branches") {
+          return textResult("当前分支：develop", branches);
+        }
+
+        if (name === "git_log") {
+          const branch = args.branch || "all";
+          const ancestry = branch === "all" ? null : ancestorsOf(branchTips[branch] || "7f3a1b2");
+          let list = commits.filter((commit) => !ancestry || ancestry.has(commit.hash));
+          const cursor = Number(args.cursor) || 0;
+          const limit = Math.min(Number(args.limit) || 120, 120);
+          const page = list.slice(cursor, cursor + limit);
+          const nextCursor = cursor + page.length < list.length ? cursor + page.length : null;
+          return textResult(
+            page.map((commit) => `${commit.short} ${commit.subject}`).join("\n"),
+            { commits: page, nextCursor, branch }
+          );
+        }
+
+        if (name === "git_commit_detail") {
+          return textResult("提交详情", detailFor(args.hash));
+        }
+
+        if (name === "git_diff") {
+          const key = `${args.scope}:${args.path}`;
+          const text =
+            diffOverrides[key] ||
+            makeDiff(args.path, {
+              binary: args.path && args.path.endsWith(".png"),
+              created: args.scope === "untracked",
+            });
+          const lines = text.split("\n").length;
+          return textResult(text, {
+            scope: args.scope,
+            path: args.path,
+            empty: false,
+            binary: /^Binary files /m.test(text),
+            next: null,
+            totalLines: lines,
+          });
+        }
+
+        if (name === "git_commit_diff") {
+          const text = makeDiff(args.path);
+          return textResult(text, {
+            hash: args.hash,
+            path: args.path,
+            empty: false,
+            binary: false,
+            next: null,
+            totalLines: text.split("\n").length,
+          });
+        }
+
+        return {
+          isError: true,
+          content: [{ type: "text", text: `unknown tool: ${name}` }],
+          structuredContent: { error: { code: "unknown_tool", message: `unknown tool: ${name}` } },
+        };
+      }
+    </script>
+
+    <script src="../ui/panel.js"></script>
+    <script src="../ui/graph.js"></script>
+    <script src="../ui/diffview.js"></script>
+    <script src="../ui/changes-view.js"></script>
+    <script src="../ui/log-view.js"></script>
+    <script>
+      GW.start().catch((error) => {
+        const root = document.getElementById("root");
+        root.textContent = error && error.stack ? error.stack : String(error);
+      });
+    </script>
+  </body>
+</html>

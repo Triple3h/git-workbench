@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Git 工作台</title>
+    <style>
+      html,
+      body,
+      #root {
+        margin: 0;
+        height: 100%;
+      }
+      body {
+        background: #151619;
+        color: #dedfe4;
+        font:
+          12.5px/1.45 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          "PingFang SC",
+          sans-serif;
+        overflow: hidden;
+      }
+      #gw-boot {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: #79808b;
+        padding: 24px;
+        text-align: center;
+      }
+      .gw-boot-error {
+        color: #dedfe4;
+      }
+      .gw-boot-title {
+        font-size: 12.5px;
+        font-weight: 500;
+      }
+      .gw-boot-detail {
+        max-width: 520px;
+        color: #9ba1ac;
+        font-size: 11.5px;
+        line-height: 1.6;
+        word-break: break-word;
+      }
+      .gw-boot-hint {
+        color: #6c7480;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"><div id="gw-boot">正在加载 Git 工作台…</div></div>
+    <script>
+      (async () => {
+        const root = document.getElementById("root");
+        const fail = (error) => {
+          root.textContent = "";
+          const box = document.createElement("div");
+          box.className = "gw-boot gw-boot-error";
+          const title = document.createElement("div");
+          title.className = "gw-boot-title";
+          title.textContent = "Git 工作台加载失败";
+          const detail = document.createElement("div");
+          detail.className = "gw-boot-detail";
+          detail.textContent = String(error && error.message ? error.message : error);
+          const hint = document.createElement("div");
+          hint.className = "gw-boot-hint";
+          hint.textContent = "请确认插件已启用，然后重新打开此面板。";
+          box.append(title, detail, hint);
+          root.append(box);
+        };
+
+        try {
+          const z = window.zcode;
+          if (!z) {
+            throw new Error("未检测到 ZCode 宿主桥接（window.zcode）。此面板需要在 ZCode 中打开。");
+          }
+          await z.ready;
+
+          const context = z.hostContext || {};
+          const theme = context.theme === "light" ? "light" : "dark";
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+          const variables = context.styles && context.styles.variables;
+          if (variables) {
+            for (const [name, value] of Object.entries(variables)) {
+              if (value) document.documentElement.style.setProperty(name, value);
+            }
+          }
+
+          const read = async (name) => {
+            const result = await z.readResource(`ui://git-workbench/assets/${name}`);
+            const block = result && result.contents && result.contents[0];
+            if (!block || typeof block.text !== "string") {
+              throw new Error(`无法读取面板资源：${name}`);
+            }
+            return block.text;
+          };
+
+          const style = document.createElement("style");
+          style.textContent = await read("panel.css");
+          document.head.append(style);
+
+          const scripts = ["panel.js", "graph.js", "diffview.js", "changes-view.js", "log-view.js"];
+          for (const name of scripts) {
+            const script = document.createElement("script");
+            script.textContent = await read(name);
+            document.body.append(script);
+          }
+
+          await window.GW.start();
+          const boot = document.getElementById("gw-boot");
+          if (boot) boot.remove();
+        } catch (error) {
+          fail(error);
+        }
+      })();
+    </script>
+  </body>
+</html>
