@@ -2,6 +2,8 @@
 
 只读的 Git 查看器：在 ZCode 右侧栏看工作区变更、文件 diff、分支提交泳道图与提交详情。**不提供任何暂存、提交、推送或回滚操作**——写操作留给后续版本。
 
+仓库：<https://github.com/Triple3h/git-workbench>
+
 ![变更视图](docs/changes.png)
 
 ![提交记录](docs/log.png)
